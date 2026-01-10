@@ -1,0 +1,1 @@
+# estudo_de_adequabilidade_de_poder_de_teste
