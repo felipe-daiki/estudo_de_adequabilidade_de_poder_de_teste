@@ -1,1 +1,9 @@
-# estudo_de_adequabilidade_de_poder_de_teste
+Este trabalho investiga o poder estatístico de testes não paramétricos para comparação de curvas de sobrevivência na presença de censura à direita. O foco central recai sobre o teste Log-Rank e a classe de testes ponderados 𝐺(𝜌,𝜂) de Harrington e Fleming, avaliando seu desempenho sob diferentes configurações da função de risco.
+
+A fundamentação teórica baseia-se nos resultados assintóticos de Schoenfeld (1981), que estabelecem que, sob alternativas locais da ordem 𝑂(𝑛^{−1/2}), a estatística padronizada converge para uma distribuição normal com média não nula, permitindo a obtenção de aproximações analíticas para o poder do teste. Essa estrutura fornece uma expressão explícita para o parâmetro de não-centralidade 𝜙(𝜌,𝜂), o qual depende da função peso adotada, da estrutura de risco e do mecanismo de censura.
+
+A metodologia combina resultados analíticos com estudos de simulação de Monte Carlo. Foram considerados diferentes cenários paramétricos para os tempos de falha e censura, utilizando distribuições Weibull e Log-normal. A parametrização adotada permite gerar tanto situações compatíveis com riscos proporcionais quanto cenários de não proporcionalidade, viabilizando a comparação do desempenho relativo dos testes.
+
+Sob riscos proporcionais, os resultados confirmam a eficiência assintótica do teste Log-Rank. Já em cenários com riscos não proporcionais, observa-se que testes ponderados podem apresentar maior sensibilidade dependendo do padrão temporal das diferenças entre as funções de risco.
+
+A análise evidencia que o poder estatístico depende não apenas do tamanho amostral e da razão de riscos, mas também da forma funcional da função de risco e da estrutura de censura. Os resultados obtidos contribuem para o planejamento amostral e para a escolha adequada de testes em estudos de sobrevivência, fornecendo suporte teórico e empírico para aplicações práticas.
