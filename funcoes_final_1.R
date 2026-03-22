@@ -16,8 +16,6 @@ if (length(to_install) > 0) {
 lock_files <- list.files(lib_path, pattern = "^00LOCK", full.names = TRUE)
 unlink(lock_files, recursive = TRUE)
 install.packages("survminer", repos = "https://cloud.r-project.org", lib = lib_path)
-cat("Pacotes instalados em", lib_path, ":\n")
-print(list.files(lib_path))
 
 suppressPackageStartupMessages(library(Rlab))
 options(warn = -1)
