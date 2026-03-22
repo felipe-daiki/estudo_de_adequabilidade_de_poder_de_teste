@@ -1,9 +1,10 @@
+# configuracao do github e seus pacotes de R
+
 lib_path <- "~/R/library"
 dir.create(lib_path, recursive = TRUE, showWarnings = FALSE)
 .libPaths(c(lib_path, .libPaths())) 
 
-
-packages <- c("Rlab", "ggplot2", "survival", "tidyr", "survminer", "ggsurvfit")
+packages <- c("Rlab", "ggplot2", "survival", "tidyr", "ggsurvfit")
 
 installed <- rownames(installed.packages())
 to_install <- packages[!packages %in% installed]
@@ -11,6 +12,13 @@ to_install <- packages[!packages %in% installed]
 if (length(to_install) > 0) {
   install.packages(to_install, repos = "https://cloud.r-project.org")
 }
+
+lock_files <- list.files(lib_path, pattern = "^00LOCK", full.names = TRUE)
+unlink(lock_files, recursive = TRUE)
+install.packages("survminer", repos = "https://cloud.r-project.org", lib = lib_path)
+cat("Pacotes instalados em", lib_path, ":\n")
+print(list.files(lib_path))
+
 suppressPackageStartupMessages(library(Rlab))
 options(warn = -1)
 options(repr.plot.width = 16, repr.plot.height = 8)
