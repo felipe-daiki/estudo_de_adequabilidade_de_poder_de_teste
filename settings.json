@@ -1,0 +1,9 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/rocker-org/devcontainer-features/r-rig:1": {
+      "version": "release"
+    }
+  },
+  "postCreateCommand": "Rscript -e \"install.packages('IRkernel', repos='https://cloud.r-project.org'); IRkernel::installspec(user = TRUE)\""
+}
