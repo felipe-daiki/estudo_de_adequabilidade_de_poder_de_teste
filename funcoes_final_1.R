@@ -556,8 +556,8 @@ simulacao_amostral_teorica <- function(n_sim = 100,
     cat("Processando n =", n_atual, "\n")
     
     for (i in 1:n_sim) {
-      n <<- n_atual 
-      dados <<- exemplo(distribuicao, n_atual, pi,
+      n <- n_atual 
+      dados <- exemplo(distribuicao, n_atual, pi,
                         parametro_falha_experimental, parametro_falha_controle,
                         parametro_censura_experimental, parametro_censura_controle,
                         shape_falha_experimental_weibull, shape_censura_experimental_weibull,
@@ -731,7 +731,7 @@ simulacao_final_empirica <- function(n_sim,
     
     for (i in 1:n_sim) {
 
-      dados <<- exemplo(distribuicao, n, pi,
+      dados <- exemplo(distribuicao, n, pi,
                         parametro_falha_experimental = parametro_falha_controle / lambda_atual,             ## SERVE APENAS PARA O CONTEXTO DE RISCOS PROPORCIONAIS EXPONENCIAIS
                         parametro_falha_controle,
                         parametro_censura_experimental, parametro_censura_controle,
@@ -778,10 +778,10 @@ simulacao_amostral_empirica <- function(n_sim = 200,
     cat("Processando n =", n_atual, "\n")
     rejeicoes1 <- 0
     rejeicoes2 <- 0
-    n <<- n_atual
+    n <- n_atual
     for (i in 1:n_sim) {
 
-      dados <<- exemplo(distribuicao, n, pi, 
+      dados <- exemplo(distribuicao, n, pi, 
                         parametro_falha_experimental, parametro_falha_controle, 
                         parametro_censura_experimental, parametro_censura_controle,
                         shape_falha_experimental_weibull, shape_censura_experimental_weibull, 
