@@ -452,7 +452,8 @@ simulacao_final_teorica <- function(n_sim,
   matriz2 <- matrix(0, nrow = n_sim, ncol = length(razao))
   
   for (i in 1:n_sim) {
-    
+    censura_exp_acum  <- numeric(n_sim)
+    censura_ctrl_acum <- numeric(n_sim)
     cat("Simulação", i, "de", n_sim, "\n")
     
     # gerar nova base
@@ -472,10 +473,18 @@ simulacao_final_teorica <- function(n_sim,
     
     for (j in 1:length(razao)) {
       lambda <- razao[j]
-      
+      censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
+      censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
+
       matriz1[i, j] <- poder_teorica(rho1, eta1, lambda, alpha)
       matriz2[i, j] <- poder_teorica(rho2, eta2, lambda, alpha)
     }
+      cat(sprintf("\n=== Relatório | lambda = %.2f ===\n", lambda_atual))
+  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
+              mean(censura_exp_acum) * 100))
+  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
+              mean(censura_ctrl_acum) * 100))
+  cat("=====================================\n")
   }
   
   # médias
@@ -553,6 +562,8 @@ simulacao_amostral_teorica <- function(n_sim = 100,
   for (k in 1:length(ns)) {
     n_atual <- ns[k]
     
+    censura_exp_acum  <- numeric(n_sim)
+    censura_ctrl_acum <- numeric(n_sim)
     cat("Processando n =", n_atual, "\n")
     
     for (i in 1:n_sim) {
@@ -564,6 +575,11 @@ simulacao_amostral_teorica <- function(n_sim = 100,
                         shape_falha_controle_weibull, shape_censura_controle_weibull,
                         sdlog_falha_experimental, sdlog_censura_experimental,
                         sdlog_falha_controle, sdlog_censura_controle)
+      
+      
+      censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
+      censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
+        
       # Poder para Teste 1
       matriz1[i, k] <- poder_teorica(rho1, eta1, alpha)
       
@@ -571,6 +587,13 @@ simulacao_amostral_teorica <- function(n_sim = 100,
       matriz2[i, k] <- poder_teorica(rho2, eta2, alpha)
       cat("mu for n=", n, ":", phi_teorica(rho1, eta1), "\n")
     }
+
+  cat(sprintf("\n=== Relatório ===\n"))
+  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
+              mean(censura_exp_acum) * 100))
+  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
+              mean(censura_ctrl_acum) * 100))
+  cat("=====================================\n")
   }
   # Poder médio por n
   poder_medio1 <- colMeans(matriz1)
@@ -728,7 +751,8 @@ simulacao_final_empirica <- function(n_sim,
   
   for (j in 1:length(razao)) {
     lambda_atual <- razao[j]
-    
+    censura_exp_acum  <- numeric(n_sim)
+  censura_ctrl_acum <- numeric(n_sim)
     for (i in 1:n_sim) {
 
       dados <- exemplo(distribuicao, n, pi,
@@ -740,6 +764,9 @@ simulacao_final_empirica <- function(n_sim,
                         sdlog_falha_experimental, sdlog_censura_experimental,
                         sdlog_falha_controle, sdlog_censura_controle)
       
+      censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
+      censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
+
       matriz1[i, j] <- poder_empirica(rho1, eta1, lambda_atual, alpha)
       matriz2[i, j] <- poder_empirica(rho2, eta2, lambda_atual, alpha)
     }
@@ -747,6 +774,14 @@ simulacao_final_empirica <- function(n_sim,
   poder_medio1 <- colMeans(matriz1)
   poder_medio2 <- colMeans(matriz2)
   
+  # relatório de censura média para este lambda
+  cat(sprintf("\n=== Relatório | lambda = %.2f ===\n", lambda_atual))
+  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
+              mean(censura_exp_acum) * 100))
+  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
+              mean(censura_ctrl_acum) * 100))
+  cat("=====================================\n")
+
   dados_poder_final <- data.frame(razao = razao, Teste1 = poder_medio1, Teste2 = poder_medio2)
   dados_long <- tidyr::pivot_longer(dados_poder_final, cols = -razao, names_to = "Teste", values_to = "Poder")
   
@@ -778,6 +813,8 @@ simulacao_amostral_empirica <- function(n_sim = 200,
     cat("Processando n =", n_atual, "\n")
     rejeicoes1 <- 0
     rejeicoes2 <- 0
+    censura_exp_acum  <- numeric(n_sim)
+  censura_ctrl_acum <- numeric(n_sim)
     n <- n_atual
     for (i in 1:n_sim) {
 
@@ -792,8 +829,15 @@ simulacao_amostral_empirica <- function(n_sim = 200,
       # teste empirico
       if (abs(T(rho1, eta1)) > z_critico) rejeicoes1 <- rejeicoes1 + 1
       if (abs(T(rho2, eta2)) > z_critico) rejeicoes2 <- rejeicoes2 + 1
+          censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
+    censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
     }
-    
+      cat(sprintf("\n=== Relatório\n"))
+  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
+              mean(censura_exp_acum) * 100))
+  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
+              mean(censura_ctrl_acum) * 100))
+  cat("=====================================\n")
     resultados <- rbind(resultados, data.frame(
       n = n_atual,
       Poder = rejeicoes1 / n_sim,
