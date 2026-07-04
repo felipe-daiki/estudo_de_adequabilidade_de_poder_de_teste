@@ -27,6 +27,7 @@ library(tidyr)
 library(survminer)
 library(ggsurvfit)
 
+
 ### =============== CRIAÇÃO DO EXEMPLO ===================== ###
 exemplo <- function(distribuicao, n, pi,
                     parametro_falha_experimental, parametro_falha_controle,
@@ -34,7 +35,7 @@ exemplo <- function(distribuicao, n, pi,
                     shape_falha_experimental_weibull = NULL, shape_censura_experimental_weibull = NULL,
                     shape_falha_controle_weibull = NULL, shape_censura_controle_weibull = NULL,
                     sdlog_falha_experimental = NULL, sdlog_censura_experimental = NULL,
-                    sdlog_falha_controle = NULL, sdlog_censura_controle = NULL){
+                    sdlog_falha_controle = NULL, sdlog_censura_controle = NULL, individual = "nao"){
   
   # seja X a bernoulli para indicar o grupo experimental e grupo controle
   X <- rbern(n,pi)
@@ -106,12 +107,12 @@ exemplo <- function(distribuicao, n, pi,
   prop_real_exp <- mean(experimental$delta == 0)
   prop_real_ctrl <- mean(controle$delta == 0)
   
-  cat("\n=== Relatório da Simulação ===\n")
-  cat(sprintf("Grupo Experimental (A) - Censura Observada: %.1f%%\n", 
-              prop_real_exp * 100))
-  cat(sprintf("Grupo Controle     (B) - Censura Observada: %.1f%%\n", 
-              prop_real_ctrl * 100))
-  cat("==============================\n")
+  if (individual == "sim") {
+      cat("\n=== Relatório da Simulação Individual ===\n")
+      cat(sprintf("Grupo Experimental (A) - Censura Observada: %.1f%%\n", prop_real_exp * 100))
+      cat(sprintf("Grupo Controle (B) - Censura Observada: %.1f%%\n", prop_real_ctrl * 100))
+      cat("=========================================\n")
+    }
   
   # ================= JUNÇÃO E ORDENAÇÃO ====================== #
   dados <- rbind(experimental, controle)
@@ -439,7 +440,6 @@ grafico_poder_teorica <- function(rho1 = 0, eta1 = 0, rho2 = 1, eta2 = 0, razao 
     )
 }
 
-## simulacao monte carlo
 simulacao_final_teorica <- function(n_sim,
                             rho1 = 0, eta1 = 0,
                             rho2 = 1, eta2 = 0, alpha = 0.05) {
@@ -452,8 +452,7 @@ simulacao_final_teorica <- function(n_sim,
   matriz2 <- matrix(0, nrow = n_sim, ncol = length(razao))
   
   for (i in 1:n_sim) {
-    censura_exp_acum  <- numeric(n_sim)
-    censura_ctrl_acum <- numeric(n_sim)
+    
     cat("Simulação", i, "de", n_sim, "\n")
     
     # gerar nova base
@@ -473,18 +472,10 @@ simulacao_final_teorica <- function(n_sim,
     
     for (j in 1:length(razao)) {
       lambda <- razao[j]
-      censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
-      censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
-
+      
       matriz1[i, j] <- poder_teorica(rho1, eta1, lambda, alpha)
       matriz2[i, j] <- poder_teorica(rho2, eta2, lambda, alpha)
     }
-      cat(sprintf("\n=== Relatório | lambda = %.2f ===\n", lambda_atual))
-  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
-              mean(censura_exp_acum) * 100))
-  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
-              mean(censura_ctrl_acum) * 100))
-  cat("=====================================\n")
   }
   
   # médias
@@ -562,24 +553,17 @@ simulacao_amostral_teorica <- function(n_sim = 100,
   for (k in 1:length(ns)) {
     n_atual <- ns[k]
     
-    censura_exp_acum  <- numeric(n_sim)
-    censura_ctrl_acum <- numeric(n_sim)
     cat("Processando n =", n_atual, "\n")
     
     for (i in 1:n_sim) {
-      n <- n_atual 
-      dados <- exemplo(distribuicao, n_atual, pi,
+      n <<- n_atual 
+      dados <<- exemplo(distribuicao, n_atual, pi,
                         parametro_falha_experimental, parametro_falha_controle,
                         parametro_censura_experimental, parametro_censura_controle,
                         shape_falha_experimental_weibull, shape_censura_experimental_weibull,
                         shape_falha_controle_weibull, shape_censura_controle_weibull,
                         sdlog_falha_experimental, sdlog_censura_experimental,
                         sdlog_falha_controle, sdlog_censura_controle)
-      
-      
-      censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
-      censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
-        
       # Poder para Teste 1
       matriz1[i, k] <- poder_teorica(rho1, eta1, alpha)
       
@@ -587,13 +571,6 @@ simulacao_amostral_teorica <- function(n_sim = 100,
       matriz2[i, k] <- poder_teorica(rho2, eta2, alpha)
       cat("mu for n=", n, ":", phi_teorica(rho1, eta1), "\n")
     }
-
-  cat(sprintf("\n=== Relatório ===\n"))
-  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
-              mean(censura_exp_acum) * 100))
-  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
-              mean(censura_ctrl_acum) * 100))
-  cat("=====================================\n")
   }
   # Poder médio por n
   poder_medio1 <- colMeans(matriz1)
@@ -650,6 +627,104 @@ simulacao_amostral_teorica <- function(n_sim = 100,
 }
 
 ## =========================================================================================================================== ###
+gerar_grafico_censura_media <- function(z_todos, delta_todos, titulo = "Taxa de censura por período") {
+  
+  # Cria um dataframe com todos os dados da simulação agregados
+  dados_agg <- data.frame(z = z_todos, delta = delta_todos)
+  censurados <- dados_agg[dados_agg$delta == 0, ]
+  
+  # === NOVO: QUEBRA POR QUANTIS (Quantidades iguais de dados) === #
+  # Pega os decis da distribuição (10%, 20%, 30% dos dados...)
+  # O 'unique' garante que, se houver muitos tempos idênticos, não teremos quebras duplicadas que geram erro.
+  breaks <- unique(quantile(dados_agg$z, probs = seq(0, 1, length.out = 10)))
+  
+  # Assegura que o primeiro valor cubra o mínimo absoluto com segurança
+  breaks[1] <- breaks[1] - 1e-6 
+  
+  intervalo_todos      <- cut(dados_agg$z, breaks = breaks, include.lowest = TRUE)
+  intervalo_censurados <- cut(censurados$z, breaks = breaks, include.lowest = TRUE)
+  
+  total_intervalo      <- table(intervalo_todos)
+  censurados_intervalo <- table(intervalo_censurados)
+  
+  # Cálculo de Falhas e Geração da Tabela
+  falhas_intervalo <- total_intervalo - censurados_intervalo
+  
+  pct_censura <- as.numeric(censurados_intervalo / total_intervalo * 100)
+  pct_censura[is.nan(pct_censura)] <- 0
+  
+  # Rótulos simplificados (usamos 2 casas decimais para capturar quebras de quantis muito próximas)
+  rotulos <- paste0(round(breaks[-length(breaks)], 2), " a ", round(breaks[-1], 2))
+  
+  # Criação do Data Frame de Resumo
+  tabela_resumo <- data.frame(
+    Intervalo = rotulos,
+    Individuos_Totais = as.numeric(total_intervalo),
+    Falhas = as.numeric(falhas_intervalo),
+    Censuras = as.numeric(censurados_intervalo),
+    Taxa_Censura_Pct = paste0(round(pct_censura, 1), "%")
+  )
+  
+  # Imprime a tabela no console
+  cat("\n=== Resumo de Eventos por Intervalo de Tempo (Quantis) ===\n")
+  print(tabela_resumo, row.names = FALSE)
+  cat("==========================================================\n\n")
+  
+  # === GERAÇÃO DO GRÁFICO === #
+  cores <- colorRampPalette(c("#cce5ff", "#1a6eb5"))(100)
+  indices_cor <- pmax(1, pmin(100, round(pct_censura)))
+  cores_barras <- cores[indices_cor]
+  
+  # Parâmetros gráficos
+  par(bg = "white", mar = c(6, 5, 4, 2), family = "sans") # Aumentado o 'mar' inferior para caber os rótulos
+  
+  bp <- barplot(
+    pct_censura,
+    names.arg = rotulos,
+    col       = cores_barras,
+    border    = NA,
+    ylim      = c(0, 110),
+    axes      = FALSE,
+    las       = 2,      # Rótulos na vertical/inclinados para não sobrepor, já que os números podem ter decimais
+    cex.names = 0.75,
+    space     = 0.4
+  )
+  
+  axis(2, at = seq(0, 100, 20),
+       labels = paste0(seq(0, 100, 20), "%"),
+       las = 1, col = NA, col.ticks = "#cccccc",
+       col.axis = "#555555", cex.axis = 0.85)
+  
+  abline(h = seq(0, 100, 20), col = "#eeeeee", lwd = 1)
+  
+  barplot(pct_censura, col = cores_barras, border = NA,
+          axes = FALSE, add = TRUE, space = 0.4)
+  
+  abline(h = 30, col = "#e05a5a", lty = 2, lwd = 1.5)
+  
+  text(x      = bp,
+       y      = pct_censura + 3,
+       labels = ifelse(pct_censura > 0, paste0(round(pct_censura, 1), "%"), ""),
+       cex    = 0.78,
+       col    = "#333333",
+       font   = 2)
+  
+  title(
+    main     = titulo,
+    col.main = "#222222", cex.main = 1.2, font.main = 2,
+    ylab     = "% de Censura no Período"
+  )
+  # Usamos mtext para deslocar o título do eixo X um pouco mais para baixo
+  mtext("Intervalo de Tempo (Quantis de z)", side = 1, line = 4.5) 
+  
+  legend("topright",
+         legend   = "taxa alvo (30%)",
+         col      = "#e05a5a",
+         lty = 2, lwd = 1.5,
+         bty      = "n",
+         cex      = 0.85,
+         text.col = "#555555")
+}
 
 ### FUNCOES EMPIRICAS
 
@@ -749,22 +824,25 @@ simulacao_final_empirica <- function(n_sim,
   matriz1 <- matrix(0, nrow = n_sim, ncol = length(razao))
   matriz2 <- matrix(0, nrow = n_sim, ncol = length(razao))
   
+
   for (j in 1:length(razao)) {
     lambda_atual <- razao[j]
-    censura_exp_acum  <- numeric(n_sim)
-  censura_ctrl_acum <- numeric(n_sim)
+    
+    censura_exp_acum <- numeric(n_sim)
+    censura_ctrl_acum <- numeric(n_sim)
+
     for (i in 1:n_sim) {
 
-      dados <- exemplo(distribuicao, n, pi,
-                        parametro_falha_experimental = parametro_falha_experimental,             ## SERVE APENAS PARA O CONTEXTO DE RISCOS PROPORCIONAIS EXPONENCIAIS
+      dados <<- exemplo(distribuicao, n, pi,
+                        parametro_falha_experimental = parametro_falha_controle / lambda_atual,             ## SERVE APENAS PARA O CONTEXTO DE RISCOS PROPORCIONAIS EXPONENCIAIS
                         parametro_falha_controle,
                         parametro_censura_experimental, parametro_censura_controle,
                         shape_falha_experimental_weibull, shape_censura_experimental_weibull,
                         shape_falha_controle_weibull, shape_censura_controle_weibull,
                         sdlog_falha_experimental, sdlog_censura_experimental,
-                        sdlog_falha_controle, sdlog_censura_controle)
+                        sdlog_falha_controle, sdlog_censura_controle, individual = "nao")
       
-      censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
+      censura_exp_acum[i] <- mean(dados$delta[dados$grupo == 'A'] == 0)
       censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
 
       matriz1[i, j] <- poder_empirica(rho1, eta1, lambda_atual, alpha)
@@ -774,12 +852,9 @@ simulacao_final_empirica <- function(n_sim,
   poder_medio1 <- colMeans(matriz1)
   poder_medio2 <- colMeans(matriz2)
   
-  # relatório de censura média para este lambda
   cat(sprintf("\n=== Relatório | lambda = %.2f ===\n", lambda_atual))
-  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
-              mean(censura_exp_acum) * 100))
-  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
-              mean(censura_ctrl_acum) * 100))
+  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n", mean(censura_exp_acum) * 100))
+  cat(sprintf("Grupo Controle (B) - Censura Média: %.1f%%\n", mean(censura_ctrl_acum) * 100))
   cat("=====================================\n")
 
   dados_poder_final <- data.frame(razao = razao, Teste1 = poder_medio1, Teste2 = poder_medio2)
@@ -813,31 +888,34 @@ simulacao_amostral_empirica <- function(n_sim = 200,
     cat("Processando n =", n_atual, "\n")
     rejeicoes1 <- 0
     rejeicoes2 <- 0
-    censura_exp_acum  <- numeric(n_sim)
-  censura_ctrl_acum <- numeric(n_sim)
-    n <- n_atual
+    
+    censura_exp_acum <- numeric(n_sim)
+    censura_ctrl_acum <- numeric(n_sim)
+
+    n <<- n_atual
     for (i in 1:n_sim) {
 
-      dados <- exemplo(distribuicao, n, pi, 
+      dados <<- exemplo(distribuicao, n, pi, 
                         parametro_falha_experimental, parametro_falha_controle, 
                         parametro_censura_experimental, parametro_censura_controle,
                         shape_falha_experimental_weibull, shape_censura_experimental_weibull, 
                         shape_falha_controle_weibull, shape_censura_controle_weibull, 
                         sdlog_falha_experimental, sdlog_censura_experimental, 
-                        sdlog_falha_controle, sdlog_censura_controle)
+                        sdlog_falha_controle, sdlog_censura_controle, individual = "nao")
       
       # teste empirico
       if (abs(T(rho1, eta1)) > z_critico) rejeicoes1 <- rejeicoes1 + 1
       if (abs(T(rho2, eta2)) > z_critico) rejeicoes2 <- rejeicoes2 + 1
-          censura_exp_acum[i]  <- mean(dados$delta[dados$grupo == 'A'] == 0)
-    censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
+
+      censura_exp_acum[i] <- mean(dados$delta[dados$grupo == 'A'] == 0)
+      censura_ctrl_acum[i] <- mean(dados$delta[dados$grupo == 'B'] == 0)
     }
-      cat(sprintf("\n=== Relatório\n"))
-  cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n",
-              mean(censura_exp_acum) * 100))
-  cat(sprintf("Grupo Controle     (B) - Censura Média: %.1f%%\n",
-              mean(censura_ctrl_acum) * 100))
-  cat("=====================================\n")
+
+    cat(sprintf("\n=== Relatório | n = %d ===\n", n_atual))
+    cat(sprintf("Grupo Experimental (A) - Censura Média: %.1f%%\n", mean(censura_exp_acum) * 100))
+    cat(sprintf("Grupo Controle (B) - Censura Média: %.1f%%\n", mean(censura_ctrl_acum) * 100))
+    cat("=====================================\n")
+    
     resultados <- rbind(resultados, data.frame(
       n = n_atual,
       Poder = rejeicoes1 / n_sim,
@@ -914,3 +992,41 @@ grafico_phi_comparativo <- function(razao, rho = 0, eta = 0){
   print(g)
 }
 
+avaliar_perfil_censura_independente <- function(n_sim = 500) {
+  
+  # Ajuste da razão de risco baseado no lambda_atual (útil se você usa a parametrização exponencial/weibull proporcional)
+  
+  # Alocação eficiente de memória em listas
+  z_list <- vector("list", n_sim)
+  delta_list <- vector("list", n_sim)
+  
+  for (i in 1:n_sim) {
+    # Chama a função exemplo silenciosamente
+      dados <<- exemplo(distribuicao, n, pi, 
+                        parametro_falha_experimental, parametro_falha_controle, 
+                        parametro_censura_experimental, parametro_censura_controle,
+                        shape_falha_experimental_weibull, shape_censura_experimental_weibull, 
+                        shape_falha_controle_weibull, shape_censura_controle_weibull, 
+                        sdlog_falha_experimental, sdlog_censura_experimental, 
+                        sdlog_falha_controle, sdlog_censura_controle, individual = "nao")
+    
+    # Armazena os vetores gerados na lista
+    z_list[[i]] <- dados$z
+    delta_list[[i]] <- dados$delta
+  }
+  
+  
+  # Transforma a lista de resultados num vetor único gigante e contínuo
+  z_todos_agregado <- unlist(z_list)
+  delta_todos_agregado <- unlist(delta_list)
+  
+  # Título dinâmico para o gráfico
+  titulo_dinamico <- sprintf("Taxa de censura por período (n_sim = %d)", n_sim)
+  
+  # Chama a sua função de plotagem
+  gerar_grafico_censura_media(
+    z_todos = z_todos_agregado, 
+    delta_todos = delta_todos_agregado,
+    titulo = titulo_dinamico
+  )
+}
